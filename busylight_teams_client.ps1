@@ -10,22 +10,25 @@ $LastActivity = ""
 if ((Get-NetConnectionProfile).Name -match $Config.MyNetworkName) {
     while($true) {
         $LogContent = Get-Content $Config.TeamsLogFile -tail 1000 | Select-String -Pattern 'StatusIndicatorStateService\: Added (\w+) [^|]*'
-        $activity = $LogContent.Matches[$LogContent.Matches.Length - 1].Groups[1].Value
+        if ($null -ne $activity) {
+            $activity = $LogContent.Matches[$LogContent.Matches.Length - 1].Groups[1].Value
 
-        if ($null -ne $activity -and $activity -ne $LastActivity) {
-            $retries = $Config.MaxRetry
-            do {
-                Write-Output "$(Get-TimeStamp) Setting status to $activity"
-                try {
-                    $result = Invoke-RestMethod -Uri $Config.URL -Method 'Post' -Body @{ state = $activity }
-                    $LastActivity = $activity
-                    $retries = 0
-                } catch [System.Object] {
-                    $retries--
-                    Start-Sleep -Seconds $Config.RetryWait
-                }
-            } until ($retries -eq 0) 
+            if ($activity -ne $LastActivity) {
+                $retries = $Config.MaxRetry
+                do {
+                    Write-Output "$(Get-TimeStamp) Setting status to $activity"
+                    try {
+                        $result = Invoke-RestMethod -Uri $Config.URL -Method 'Post' -Body @{ state = $activity }
+                        $LastActivity = $activity
+                        $retries = 0
+                    } catch [System.Object] {
+                        $retries--
+                        Start-Sleep -Seconds $Config.RetryWait
+                    }
+                } until ($retries -eq 0) 
+            }
         }
+
         Start-Sleep –Seconds $Config.PollingInterval 
     }
 } else {
