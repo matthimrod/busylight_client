@@ -8,12 +8,12 @@ function Get-TimeStamp {
 $LastActivity = ""
 
 if ((Get-NetConnectionProfile).Name -match $Config.MyNetworkName) {
-    while($true) {
-        $LogContent = Get-Content $Config.TeamsLogFile -tail 1000 | Select-String -Pattern 'StatusIndicatorStateService\: Added (\w+) [^|]*'
-        if ($null -ne $activity) {
-            $activity = $LogContent.Matches[$LogContent.Matches.Length - 1].Groups[1].Value
+    while ($true) {
+        $LogEntry = Select-String -Path $Config.TeamsLogFile -Pattern 'StatusIndicatorStateService\: Added (\w+) [^|]*' | Select-Object -Last 1
+        if ($null -ne $LogEntry) {
+            $activity = $LogEntry.Matches.Groups[1].Value
 
-            if ($activity -ne $LastActivity) {
+            if ($null -ne $activity -and $activity -ne $LastActivity) {
                 $retries = $Config.MaxRetry
                 do {
                     Write-Output "$(Get-TimeStamp) Setting status to $activity"
@@ -21,16 +21,18 @@ if ((Get-NetConnectionProfile).Name -match $Config.MyNetworkName) {
                         $result = Invoke-RestMethod -Uri $Config.URL -Method 'Post' -Body @{ state = $activity }
                         $LastActivity = $activity
                         $retries = 0
-                    } catch [System.Object] {
+                    }
+                    catch [System.Object] {
                         $retries--
                         Start-Sleep -Seconds $Config.RetryWait
                     }
                 } until ($retries -eq 0) 
             }
+            Start-Sleep –Seconds $Config.PollingInterval 
         }
-
-        Start-Sleep –Seconds $Config.PollingInterval 
     }
-} else {
+}
+else {
     Write-Output "Not connected to home network!"
+    Start-Sleep -Seconds $Config.RetryWait
 }

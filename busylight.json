@@ -3,7 +3,7 @@
     "NetworkName": "MyHomeWiFi",
     "PollingInterval": 60,
     "RetryWait": 5,
-    "TeamsLogFile": "C:\\Users\\[username]\\AppData\\Roaming\\Microsoft\\Teams\\log.txt",
+    "TeamsLogFile": "C:\\Users\\[username]\\AppData\\Roaming\\Microsoft\\Teams\\logs.txt",
     "URL": "http://192.168.1.100/api/presence",
     "WindowTitle": "BusyLight Client"
 }
