@@ -1,6 +1,6 @@
 # busylight_client
 
-Raspberry Pi busy indicator light client
+Raspberry Pi busy indicator light client. For the server, see [github.com/matthimrod/busylight](https://github.com/matthimrod/busylight)
 
 ## Requirements
 
