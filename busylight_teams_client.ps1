@@ -20,7 +20,7 @@ if ((Get-NetConnectionProfile).Name -match $Config.MyNetworkName) {
                     $prevProgressPreference = $Global:ProgressPreference
                     try {
                         $Global:ProgressPreference = 'SilentlyContinue'
-                        Invoke-RestMethod -Uri $Config.URL -Method 'Post' -Body @{ state = $activity }
+                        $null = Invoke-RestMethod -Uri $Config.URL -Method 'Post' -Body @{ state = $activity }
                         $LastActivity = $activity
                         $retries = 0
                     } catch [System.Object] {
