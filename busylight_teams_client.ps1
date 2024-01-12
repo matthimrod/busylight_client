@@ -18,17 +18,14 @@ if ((Get-NetConnectionProfile).Name -match $Config.MyNetworkName) {
                     $retries = $Config.MaxRetry
                     do {
                         Write-Output "$(Get-TimeStamp) Setting status to $activity"
-                        $prevProgressPreference = $Global:ProgressPreference
                         try {
                             $Global:ProgressPreference = 'SilentlyContinue'
-                            $null = Invoke-RestMethod -Uri $Config.URL -Method 'Post' -Body @{ state = $activity }
+                            $null = Invoke-RestMethod -ProgressAction SilentlyContinue -Uri $Config.URL -Method 'Post' -Body @{ state = $activity }
                             $LastActivity = $activity
                             $retries = 0
                         } catch [System.Object] {
                             $retries--
                             Start-Sleep -Seconds $Config.RetryWait
-                        } finally {
-                            $Global:ProgressPreference = $prevProgressPreference
                         }
                     } until ($retries -eq 0) 
                 }
