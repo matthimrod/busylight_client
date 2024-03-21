@@ -5,30 +5,45 @@ function Get-TimeStamp {
     return "[{0:MM/dd/yy} {0:HH:mm:ss}]" -f (Get-Date)
 }
 
+function Get-WebcamInUse {
+    $webcam_last_used = Get-ChildItem HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam `
+       | ForEach-Object { if( $_.Property.Contains('LastUsedTimeStop') ) { $_.GetValue('LastUsedTimeStop') } }
+    return $webcam_last_used -Contains 0
+}
+
+function Get-MicrophoneInUse {
+    $microphone_last_used = Get-ChildItem HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone `
+       | ForEach-Object { if( $_.Property.Contains('LastUsedTimeStop') ) { $_.GetValue('LastUsedTimeStop') } }
+    return $microphone_last_used -Contains 0
+}
+
 $LastActivity = ""
 
 if ((Get-NetConnectionProfile).Name -match $Config.MyNetworkName) {
     try {
         while($true) {
-            $LogContent = Get-Content $Config.TeamsLogFile -tail 2000 | Select-String -Pattern 'StatusIndicatorStateService\: Added (\w+) [^|]*'
-            if ($LogContent -and $LogContent.Matches.Length -ge 1) {
-                $activity = $LogContent.Matches[$LogContent.Matches.Length - 1].Groups[1].Value
+            $webcam = Get-WebcamInUse
+            $microphone = Get-MicrophoneInUse
+
+            if ($webcam -or $microphone) {
+                $activity = 'on-the-phone'
+            } else {
+                $activity = 'away'
+            }
     
-                if ($null -ne $activity -and $activity -ne $LastActivity) {
-                    $retries = $Config.MaxRetry
-                    do {
-                        Write-Output "$(Get-TimeStamp) Setting status to $activity"
-                        try {
-                            $Global:ProgressPreference = 'SilentlyContinue'
-                            $null = Invoke-RestMethod -ProgressAction SilentlyContinue -Uri $Config.URL -Method 'Post' -Body @{ state = $activity }
-                            $LastActivity = $activity
-                            $retries = 0
-                        } catch [System.Object] {
-                            $retries--
-                            Start-Sleep -Seconds $Config.RetryWait
-                        }
-                    } until ($retries -eq 0) 
-                }
+            if ($null -ne $activity -and $activity -ne $LastActivity) {
+                $retries = $Config.MaxRetry
+                do {
+                    Write-Output "$(Get-TimeStamp) Setting status to $activity"
+                    try {
+                        $null = Invoke-RestMethod -ProgressAction SilentlyContinue -Uri $Config.URL -Method 'Post' -Body @{ state = $activity }
+                        $LastActivity = $activity
+                        $retries = 0
+                    } catch [System.Object] {
+                        $retries--
+                        Start-Sleep -Seconds $Config.RetryWait
+                    }
+                } until ($retries -eq 0) 
             }
             Start-Sleep –Seconds $Config.PollingInterval 
         }
